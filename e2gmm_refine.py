@@ -315,9 +315,9 @@ def set_indices_boxsz(boxsz, apix=0, return_freq=False):
 		return params
 
 class ResidLinear(tf.keras.layers.Layer):
-	def __init__(self, nout, activation=None, regularizer=None):
+	def __init__(self, nout, activation=None, regularizer=None, bias_initializer=None):
 		super(ResidLinear, self).__init__()
-		self.linear = tf.layers.Dense(nout, activation=activation, kernel_regularizer=regularizer)
+		self.linear = tf.keras.layers.Dense(nout, activation=activation, kernel_regularizer=regularizer, bias_initializer=bias_initializer)
 	
 	def call(self, inputs):
 		out = self.linear(inputs) + inputs
@@ -348,7 +348,7 @@ def build_encoder(mid=512, nout=4, conv=False, ninp=-1):
 	elif ninp<0:
 		layers=[
 		tf.keras.layers.Flatten(),
-		ResidLinear(mid, activation="relu", kernel_regularizer=l2),
+		tf.keras.layers.Dense(mid, activation="relu", kernel_regularizer=l2),
 		ResidLinear(mid, activation="relu", kernel_regularizer=l2),
 		ResidLinear(mid, activation="relu", kernel_regularizer=l2),
 		ResidLinear(mid, activation="relu", kernel_regularizer=l2),
@@ -362,10 +362,10 @@ def build_encoder(mid=512, nout=4, conv=False, ninp=-1):
 		print(f"Encoder {max(ninp//2,nout)} {max(ninp//8,nout)} {max(ninp//32,nout)}")
 		layers=[
 		tf.keras.layers.Flatten(),
-		ResidLinear(max(ninp//2,nout*2), activation="relu", kernel_regularizer=l2,use_bias=True,bias_initializer=kinit),
+		tf.keras.layers.Dense(max(ninp//2,nout*2), activation="relu", kernel_regularizer=l2,use_bias=True,bias_initializer=kinit),
 		tf.keras.layers.Dropout(.3),
-		ResidLinear(max(ninp//8,nout*2), activation="relu", kernel_regularizer=l2,use_bias=True),
-		ResidLinear(max(ninp//32,nout*2), activation="relu", kernel_regularizer=l2,use_bias=True),
+		tf.keras.layers.Dense(max(ninp//8,nout*2), activation="relu", kernel_regularizer=l2,use_bias=True),
+		tf.keras.layers.Dense(max(ninp//32,nout*2), activation="relu", kernel_regularizer=l2,use_bias=True),
 		ResidLinear(max(ninp//32,nout*2), activation="relu", kernel_regularizer=l2,use_bias=True),
 		#tf.keras.layers.Dense(max(ninp//2,nout*2), activation="tanh", kernel_regularizer=l1,use_bias=True,bias_initializer=kinit),
 		#tf.keras.layers.Dropout(.3),
@@ -418,7 +418,7 @@ def build_decoder(pts, mid=512, ninp=4, conv=False):
 			#tf.keras.layers.Dense(max(mid/16,ninp),activation="relu",bias_initializer=kinit),
 			#tf.keras.layers.Dense(max(mid/4,ninp),activation="relu"),
 			#tf.keras.layers.Dense(mid,activation="relu"),
-			ResidLinear(mid,activation="relu",bias_initializer=kinit),
+			tf.keras.layers.Dense(mid,activation="relu",bias_initializer=kinit),
 			ResidLinear(mid,activation="relu"),
 			ResidLinear(mid,activation="relu"),
 			ResidLinear(mid,activation="relu"),
@@ -430,10 +430,11 @@ def build_decoder(pts, mid=512, ninp=4, conv=False):
 	else:
 		print(f"Decoder {max(npt//32,ninp)} {max(npt//8,ninp)} {max(npt//2,ninp)}")
 		layers=[
+			tf.keras.layers.Dense(max(npt//32,ninp*2),activation="relu",use_bias=True,bias_initializer=kinit),
 			ResidLinear(max(npt//32,ninp*2),activation="relu",use_bias=True,bias_initializer=kinit),
-			ResidLinear(max(npt//8,ninp*2),activation="relu",use_bias=True),
-			ResidLinear(max(npt//2,ninp),activation="relu",use_bias=True),
-			ResidLinear(max(npt//2,ninp),activation="relu",use_bias=True),
+			tf.keras.layers.Dense(max(npt//8,ninp*2),activation="relu",use_bias=True),
+			tf.keras.layers.Dense(max(npt//2,ninp),activation="relu",use_bias=True),
+			tf.keras.layers.Dense(max(npt//2,ninp),activation="relu",use_bias=True),
 			#tf.keras.layers.Dense(max(npt//32,ninp*2),activation="tanh", kernel_regularizer=l1,use_bias=True),
 			#tf.keras.layers.Dense(max(npt//8,ninp*2),activation="tanh", kernel_regularizer=l1,use_bias=True),
 			#tf.keras.layers.Dense(max(npt//2,ninp),activation="tanh", kernel_regularizer=l1,use_bias=True,bias_initializer=kinit),
